@@ -50,7 +50,8 @@ batch = processor(
     descriptions=[description],
 ).to("cuda")
 
-result = model.separate(batch)
+with torch.inference_mode():
+   result = model.separate(batch)
 
 # Save separated audio
 sample_rate = processor.audio_sampling_rate
@@ -78,6 +79,25 @@ SAM-Audio supports three types of prompts:
    ```
 
 See the [examples](examples) directory for more detailed examples
+
+### Span Prediction (Optional for Text Prompting)
+
+We also provide support for automatically predicting the spans based on the text description, which is especially helpful for separating non-ambience sound events.  You can enable this by adding `predict_spans=True` in your call to `separate`
+
+```python
+with torch.inference_mode()
+   outputs = model.separate(batch, predict_spans=True)
+```
+
+### Re-Ranking
+
+We provide the following models to assess the quality of the separated audio:
+
+- [CLAP](https://github.com/LAION-AI/CLAP): measures the similarity between the target audio and text description
+- [Judge](https://huggingface.co/facebook/sam-audio-judge): measures the overall separation quality across 3 axes: precision, recall, and faithfulness (see the [model card](https://huggingface.co/facebook/sam-audio-judge#output-format) for more details)
+- [ImageBind](https://github.com/facebookresearch/ImageBind): for visual prompting, we measure the imagebind embedding similarity between the separated audio and the masked input video
+
+We provide support for generating multiple candidates (by setting `reranking_candidates=<k>` in your call to `separate`), which will generate `k` audios, and choose the best one based on the ranking models mentioned above
 
 # Models
 
