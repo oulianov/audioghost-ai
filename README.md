@@ -111,7 +111,7 @@ Below is a table of each of the models we released along with their overall subj
 | [`sam-audio-base`](https://huggingface.co/facebook/sam-audio-base)   | 3.28        | 4.25   | 3.57    | 3.87  | 3.66        | 4.27       |
 | [`sam-audio-large`](https://huggingface.co/facebook/sam-audio-large) | 3.50        | 4.03   | 3.60    | 4.22  | 3.66        | 4.49       |
 
-We additional release another variant (in each size) that performs better specifically on visual prompting:
+We additional release another variant (in each size) that is better specifically on correctness of target sound as well as visual prompting:
 - [`sam-audio-small-tv`](https://huggingface.co/facebook/sam-audio-small-tv)
 - [`sam-audio-base-tv`](https://huggingface.co/facebook/sam-audio-base-tv)
 - [`sam-audio-large-tv`](https://huggingface.co/facebook/sam-audio-large-tv)
