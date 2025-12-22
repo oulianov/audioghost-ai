@@ -1,137 +1,238 @@
-<div align="center">
+# AudioGhost AI 🎵👻
 
-# SAM-Audio
+**AI-Powered Object-Oriented Audio Separation**
 
-![CI](https://github.com/facebookresearch/sam-audio/actions/workflows/ci.yaml/badge.svg)
+Describe the sound you want to extract or remove using natural language. Powered by Meta's [SAM-Audio](https://github.com/facebookresearch/sam-audio) model.
 
-![model_image](assets/sam_audio_main_model.png)
+![Demo](https://img.shields.io/badge/status-MVP%20v1.0-green) ![Python](https://img.shields.io/badge/python-3.11+-blue) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-</div>
+## Features
 
-Segment Anything Model for Audio [[**Blog**](https://ai.meta.com/blog/sam-audio/)] [[**Paper**](https://ai.meta.com/research/publications/sam-audio-segment-anything-in-audio/)] [[**Demo**](https://aidemos.meta.com/segment-anything/editor/segment-audio)]
+- 🎯 **Text-Guided Separation** - Describe what you want to extract: "vocals", "drums", "a dog barking"
+- 🚀 **Memory Optimized** - Lite mode reduces VRAM from ~11GB to ~4GB
+- 🎨 **Modern UI** - Glassmorphism design with waveform visualization
+- ⚡ **Real-time Progress** - Track separation progress in real-time
+- 🎛️ **Stem Mixer** - Preview and compare original, extracted, and residual audio
 
-SAM-Audio is a foundation model for isolating any sound in audio using text, visual, or temporal prompts. It can separate specific sounds from complex audio mixtures based on natural language descriptions, visual cues from video, or time spans.
+## Architecture
 
-SAM-Audio and the Judge model crucially rely on [Perception-Encoder Audio-Visual (PE-AV)](https://huggingface.co/facebook/pe-av-large), which you can read more about [here](https://ai.meta.com/research/publications/pushing-the-frontier-of-audiovisual-perception-with-large-scale-multimodal-correspondence-learning/)
+```
+┌─────────────────────────────────────────────────┐
+│                   Frontend                       │
+│             (Next.js + Tailwind v4)             │
+└──────────────────────┬──────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────┐
+│               Backend API                        │
+│            (FastAPI + Python)                    │
+└──────────────────────┬──────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────┐
+│              Task Queue                          │
+│          (Celery + Redis)                        │
+└──────────────────────┬──────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────┐
+│           SAM Audio Lite                         │
+│    (Memory-optimized Meta SAM-Audio)            │
+└─────────────────────────────────────────────────┘
+```
 
-## Setup
+## Requirements
 
-**Requirements:**
-- Python >= 3.10
-- CUDA-compatible GPU (recommended)
+- **Python 3.11+**
+- **CUDA-compatible GPU** (4GB+ VRAM for lite mode, 12GB+ for full mode)
+- **CUDA 12.6** (recommended)
+- **FFmpeg** (via conda)
+- **Redis** (for Celery task queue)
+- **Node.js 18+** (for frontend)
 
-Install dependencies:
+## Quick Start
+
+### 1. Start Redis (using Docker)
 
 ```bash
-pip install .
+docker-compose up -d
 ```
+
+### 2. Create Anaconda Environment
+
+```bash
+# Create new environment (Python 3.11+ required)
+conda create -n audioghost python=3.11 -y
+
+# Activate environment
+conda activate audioghost
+```
+
+### 3. Install PyTorch (CUDA 12.6)
+
+```bash
+pip install torch==2.9.0+cu126 torchvision==0.24.0+cu126 torchaudio==2.9.0+cu126 --index-url https://download.pytorch.org/whl/cu126 --extra-index-url https://pypi.org/simple
+```
+
+### 4. Install FFmpeg (required by TorchCodec)
+
+```bash
+conda install -c conda-forge ffmpeg -y
+```
+
+### 5. Install SAM Audio
+
+```bash
+pip install git+https://github.com/facebookresearch/sam-audio.git
+```
+
+### 6. Install Backend Dependencies
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+### 7. Install Frontend Dependencies
+
+```bash
+cd frontend
+npm install
+```
+
+### 8. Start Services
+
+**Terminal 1 - Backend API:**
+```bash
+cd backend
+uvicorn main:app --reload --port 8000
+```
+
+**Terminal 2 - Celery Worker:**
+```bash
+conda activate audioghost
+cd backend
+celery -A workers.celery_app worker --loglevel=info --pool=solo
+```
+
+**Terminal 3 - Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+### 9. Open the App
+
+Navigate to `http://localhost:3000`
+
+### 10. Connect HuggingFace
+
+1. Click "Connect HuggingFace" button
+2. Request access at https://huggingface.co/facebook/sam-audio-large
+3. Create Access Token: https://huggingface.co/settings/tokens
+4. Paste the token and connect
+
+
 
 ## Usage
 
-⚠️ Before using SAM Audio, please request access to the checkpoints on the SAM Audio
-Hugging Face [repo](https://huggingface.co/facebook/sam-audio-large). Once accepted, you
-need to be authenticated to download the checkpoints. You can do this by running
-the following [steps](https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication)
-(e.g. `hf auth login` after generating an access token.)
+1. **Upload** an audio file (MP3, WAV, FLAC)
+2. **Describe** what you want to extract or remove:
+   - "vocals" / "singing voice"
+   - "drums" / "percussion"
+   - "background music"
+   - "a dog barking"
+   - "crowd noise"
+3. Click **Extract** or **Remove**
+4. Wait for processing
+5. **Preview** and **download** the results
 
-### Basic Text Prompting
+## Memory Optimization
 
-```python
-from sam_audio import SAMAudio, SAMAudioProcessor
-import torchaudio
-import torch
+AudioGhost uses a "Lite Mode" that removes unused model components:
 
-model = SAMAudio.from_pretrained("facebook/sam-audio-large")
-processor = SAMAudioProcessor.from_pretrained("facebook/sam-audio-large")
-model = model.eval().cuda()
+| Component | VRAM Saved |
+|-----------|-----------|
+| Vision Encoder | ~2GB |
+| Visual Ranker | ~2GB |
+| Text Ranker | ~2GB |
+| Span Predictor | ~1-2GB |
 
-file = "<audio file>" # audio file path or torch tensor
-description = "<description>"
+**Result**: ~4-5GB VRAM (down from ~11GB)
 
-batch = processor(
-    audios=[file],
-    descriptions=[description],
-).to("cuda")
+This is achieved by:
+- Disabling video-related features (not needed for audio-only)
+- Using `predict_spans=False` and `reranking_candidates=1`
+- Using `bfloat16` precision
 
-with torch.inference_mode():
-    # NOTE: `predict_spans` and `reranking_candidates` have a large impact on performance.
-    # Setting `predict_span=True` and `reranking_candidates=8` will give you better results at the cost of
-    # latency and memory. See the "Span Prediction" section below for more details
-   result = model.separate(batch, predict_spans=False, reranking_candidates=1)
+## Project Structure
 
-# Save separated audio
-sample_rate = processor.audio_sampling_rate
-torchaudio.save("target.wav", result.target.cpu(), sample_rate)      # The isolated sound
-torchaudio.save("residual.wav", result.residual.cpu(), sample_rate)  # Everything else
+```
+audioghost-ai/
+├── backend/
+│   ├── main.py           # FastAPI app
+│   ├── api/              # API routes
+│   │   ├── auth.py       # HuggingFace auth
+│   │   └── separate.py   # Separation endpoints
+│   └── workers/
+│       ├── celery_app.py # Celery config
+│       └── tasks.py      # SAM Audio Lite worker
+├── frontend/
+│   ├── src/
+│   │   ├── app/          # Next.js app
+│   │   └── components/   # React components
+│   └── package.json
+├── sam_audio_lite.py     # Standalone lite version
+├── QUICKSTART.md         # Quick setup guide
+└── README.md
 ```
 
-### Prompting Methods
+## API Reference
 
-SAM-Audio supports three types of prompts:
+### POST /api/separate/
 
-1. **Text Prompting**: Describe the sound you want to isolate using natural language
-   ```python
-   processor(audios=[audio], descriptions=["A man speaking"])
-   ```
+Create a separation task.
 
-2. **Visual Prompting**: Use video frames and masks to isolate sounds associated with visual objects
-   ```python
-   processor(audios=[video], descriptions=[""], masked_videos=processor.mask_videos([frames], [mask]))
-   ```
+**Form Data:**
+- `file` - Audio file
+- `description` - Text prompt (e.g., "vocals")
+- `mode` - "extract" or "remove"
+- `model_size` - "small", "base", or "large" (default: "base")
 
-3. **Span Prompting**: Specify time ranges where the target sound occurs
-   ```python
-   processor(audios=[audio], descriptions=["A horn honking"], anchors=[[["+", 6.3, 7.0]]])
-   ```
-
-See the [examples](examples) directory for more detailed examples
-
-### Span Prediction (Optional for Text Prompting)
-
-We also provide support for automatically predicting the spans based on the text description, which is especially helpful for separating non-ambience sound events.  You can enable this by adding `predict_spans=True` in your call to `separate`
-
-```python
-with torch.inference_mode()
-   outputs = model.separate(batch, predict_spans=True)
-
-# To further improve performance (at the expense of latency), you can add candidate re-ranking
-with torch.inference_mode():
-   outputs = model.separate(batch, predict_spans=True, reranking_candidates=8)
+**Response:**
+```json
+{
+  "task_id": "uuid",
+  "status": "pending",
+  "message": "Task submitted successfully"
+}
 ```
 
-### Re-Ranking
+### GET /api/separate/{task_id}/status
 
-We provide the following models to assess the quality of the separated audio:
+Get task status and progress.
 
-- [CLAP](https://github.com/LAION-AI/CLAP): measures the similarity between the target audio and text description
-- [Judge](https://huggingface.co/facebook/sam-audio-judge): measures the overall separation quality across 3 axes: precision, recall, and faithfulness (see the [model card](https://huggingface.co/facebook/sam-audio-judge#output-format) for more details)
-- [ImageBind](https://github.com/facebookresearch/ImageBind): for visual prompting, we measure the imagebind embedding similarity between the separated audio and the masked input video
+### GET /api/separate/{task_id}/download/{stem}
 
-We provide support for generating multiple candidates (by setting `reranking_candidates=<k>` in your call to `separate`), which will generate `k` audios, and choose the best one based on the ranking models mentioned above
+Download result audio (ghost, clean, or original).
 
-# Models
+## Troubleshooting
 
-Below is a table of each of the models we released along with their overall subjective evaluation scores
+### CUDA Out of Memory
+- Use `model_size: "small"` instead of "base" or "large"
+- Ensure lite mode is enabled (check for "Optimizing model for low VRAM" in logs)
+- Close other GPU applications
 
-| Model    | General SFX | Speech | Speaker | Music | Instr(wild) | Instr(pro) |
-|----------|-------------|--------|---------|-------|-------------|------------|
-| [`sam-audio-small`](https://huggingface.co/facebook/sam-audio-small) | 3.62        | 3.99   | 3.12    | 4.11  | 3.56        | 4.24       |
-| [`sam-audio-base`](https://huggingface.co/facebook/sam-audio-base)   | 3.28        | 4.25   | 3.57    | 3.87  | 3.66        | 4.27       |
-| [`sam-audio-large`](https://huggingface.co/facebook/sam-audio-large) | 3.50        | 4.03   | 3.60    | 4.22  | 3.66        | 4.49       |
+### TorchCodec DLL Error
+- Downgrade to FFmpeg 7.x
+- Ensure FFmpeg `bin` directory is in PATH
 
-We additional release another variant (in each size) that is better specifically on correctness of target sound as well as visual prompting:
-- [`sam-audio-small-tv`](https://huggingface.co/facebook/sam-audio-small-tv)
-- [`sam-audio-base-tv`](https://huggingface.co/facebook/sam-audio-base-tv)
-- [`sam-audio-large-tv`](https://huggingface.co/facebook/sam-audio-large-tv)
-
-## Evaluation
-
-See the [eval](eval) directory for instructions and scripts to reproduce results from the paper
-
-## Contributing
-
-See [contributing](CONTRIBUTING.md) and [code of conduct](CODE_OF_CONDUCT.md) for more information.
+### HuggingFace 401 Error
+- Re-authenticate via the UI
+- Check that `.hf_token` exists in `backend/`
 
 ## License
 
-This project is licensed under the SAM License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. SAM-Audio is licensed by Meta under a research license.
+
+## Credits
+
+- [SAM-Audio](https://github.com/facebookresearch/sam-audio) by Meta AI Research
+- Built with ❤️ using Next.js, FastAPI, and Celery

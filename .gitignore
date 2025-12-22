@@ -1,8 +1,91 @@
-__pycache__
-*.egg-info
-*.pyc
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 *.so
-build
-dist
-.checkpoints
-.ipynb_checkpoints
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# SAM Audio original repo (install from pip instead)
+sam_audio/
+eval/
+examples/
+assets/
+.github/
+.checkpoints/
+checkpoints/
+sam_audio.egg-info/
+
+# Test files and outputs
+*.mp3
+*.wav
+*.mp4
+output_*.wav
+output_*.mp4
+test.mp3
+test_audio.wav
+office.mp4
+
+# Test scripts (keep sam_audio_lite.py for reference)
+test_small.py
+test_video.py
+
+# Secrets
+.hf_token
+.env
+*.env
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node.js (frontend)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Redis/Celery
+*.rdb
+celerybeat-schedule
+celerybeat.pid
+
+# Logs
+*.log
+logs/
+
+# Uploads/Outputs (runtime generated)
+backend/uploads/
+backend/outputs/
+
+# Original repo files (not needed for our fork)
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+.pre-commit-config.yaml
+pyproject.toml

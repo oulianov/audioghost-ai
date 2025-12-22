@@ -1,0 +1,20 @@
+# AudioGhost AI - Backend Dependencies
+
+# FastAPI Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.19
+
+# Task Queue
+celery==5.4.0
+redis==5.2.1
+
+# Media Processing
+pydub==0.25.1
+
+# AI Dependencies (SAM Audio already installed from parent)
+# huggingface_hub is included in SAM Audio deps
+
+# Utilities
+python-dotenv==1.0.1
+aiofiles==24.1.0
