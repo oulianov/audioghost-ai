@@ -49,20 +49,15 @@ export default function Header({
                     onClick={onLogoClick}
                     title="Return to home"
                 >
-                    <div
-                        className="animate-pulse-glow"
+                    <img
+                        src="/audioghost_logo.png"
+                        alt="AudioGhost Logo"
                         style={{
                             width: "40px",
                             height: "40px",
-                            borderRadius: "12px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "linear-gradient(135deg, var(--ghost-primary), var(--ghost-accent))"
+                            borderRadius: "10px"
                         }}
-                    >
-                        <Ghost className="w-6 h-6 text-white" />
-                    </div>
+                    />
                     <div>
                         <h1 style={{ fontWeight: 700, fontSize: "1.125rem", color: "var(--text-primary)" }}>
                             Audio<span className="gradient-text">Ghost</span>

@@ -1,5 +1,7 @@
 # AudioGhost AI 🎵👻
 
+![AudioGhost Banner](banner.png)
+
 **AI-Powered Object-Oriented Audio Separation**
 
 Describe the sound you want to extract or remove using natural language. Powered by Meta's [SAM-Audio](https://github.com/facebookresearch/sam-audio) model.
