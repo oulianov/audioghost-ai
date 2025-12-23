@@ -5,10 +5,11 @@ import {
     Mic,
     Music,
     Volume2,
-    Trash2,
     Sparkles,
     Clock,
-    AlertCircle
+    AlertCircle,
+    Cpu,
+    Search
 } from "lucide-react";
 
 interface SeparationPanelProps {
@@ -26,6 +27,12 @@ const QUICK_PROMPTS = [
     { icon: Volume2, label: "Bass", prompt: "bass", color: "#F59E0B" },
     { icon: Volume2, label: "Piano", prompt: "piano", color: "#EF4444" },
 ];
+
+const MODEL_OPTIONS = [
+    { value: "small", label: "Small", vram: "~6GB", speed: "Fast" },
+    { value: "base", label: "Base", vram: "~7GB", speed: "Balanced" },
+    { value: "large", label: "Large", vram: "~10GB", speed: "Best" },
+] as const;
 
 export default function SeparationPanel({
     onSeparate,
@@ -58,161 +65,288 @@ export default function SeparationPanel({
     const activePrompt = customPrompt || selectedPrompt;
 
     return (
-        <div className="glass-card p-6">
+        <div
+            style={{
+                background: "var(--bg-secondary)",
+                borderRadius: "16px",
+                border: "1px solid var(--glass-border)",
+                overflow: "hidden"
+            }}
+        >
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="font-semibold text-lg" style={{ color: "var(--text-primary)" }}>
-                    Separation Controls
+            <div
+                style={{
+                    padding: "20px 24px",
+                    borderBottom: "1px solid var(--glass-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between"
+                }}
+            >
+                <h3 style={{
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    color: "var(--text-primary)"
+                }}>
+                    Separation Settings
                 </h3>
 
                 {hasRegion && (
                     <div
-                        className="flex items-center gap-2 px-3 py-1 rounded-full text-sm"
                         style={{
-                            background: "rgba(244, 114, 182, 0.2)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "6px 12px",
+                            borderRadius: "20px",
+                            fontSize: "0.75rem",
+                            background: "rgba(244, 114, 182, 0.15)",
                             color: "var(--ghost-accent)"
                         }}
                     >
-                        <Clock className="w-4 h-4" />
-                        Temporal Lock Active
+                        <Clock style={{ width: "12px", height: "12px" }} />
+                        Temporal Lock
                     </div>
                 )}
             </div>
 
-            {/* Mode Toggle */}
-            <div className="flex gap-2 mb-6">
-                <button
-                    onClick={() => setMode("extract")}
-                    className={`flex-1 py-3 rounded-xl font-medium transition-all ${mode === "extract" ? "text-white" : ""
-                        }`}
-                    style={{
-                        background: mode === "extract"
-                            ? "linear-gradient(135deg, var(--ghost-primary), #7C3AED)"
-                            : "var(--bg-tertiary)",
-                        color: mode === "extract" ? "white" : "var(--text-secondary)"
-                    }}
-                >
-                    ✨ Extract Sound
-                </button>
-                <button
-                    onClick={() => setMode("remove")}
-                    className={`flex-1 py-3 rounded-xl font-medium transition-all ${mode === "remove" ? "text-white" : ""
-                        }`}
-                    style={{
-                        background: mode === "remove"
-                            ? "linear-gradient(135deg, var(--ghost-error), #DC2626)"
-                            : "var(--bg-tertiary)",
-                        color: mode === "remove" ? "white" : "var(--text-secondary)"
-                    }}
-                >
-                    🗑️ Remove Sound
-                </button>
-            </div>
+            <div style={{ padding: "24px" }}>
 
-            {/* Model Size Selector */}
-            <div className="mb-6">
-                <label className="block text-sm font-medium mb-3" style={{ color: "var(--text-secondary)" }}>
-                    Model Size
-                </label>
-                <div className="flex gap-2">
-                    {([
-                        { value: "small", label: "Small", desc: "Fast (~4GB)" },
-                        { value: "base", label: "Base", desc: "Balanced (~5GB)" },
-                        { value: "large", label: "Large", desc: "Best (~8GB)" },
-                    ] as const).map(({ value, label, desc }) => (
-                        <button
-                            key={value}
-                            onClick={() => setModelSize(value)}
-                            className="flex-1 py-2 px-3 rounded-lg transition-all text-center"
-                            style={{
-                                background: modelSize === value
-                                    ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
-                                    : "var(--bg-tertiary)",
-                                color: modelSize === value ? "white" : "var(--text-secondary)",
-                                border: modelSize === value ? "none" : "1px solid var(--border-color)"
-                            }}
-                        >
-                            <div className="font-medium text-sm">{label}</div>
-                            <div className="text-xs opacity-70">{desc}</div>
-                        </button>
-                    ))}
-                </div>
-            </div>
-            {/* Quick Prompts */}
-            <div className="mb-6">
-                <label className="block text-sm font-medium mb-3" style={{ color: "var(--text-secondary)" }}>
-                    Quick Select
-                </label>
-                <div className="flex flex-wrap gap-2">
-                    {QUICK_PROMPTS.map(({ icon: Icon, label, prompt, color }) => (
-                        <button
-                            key={prompt}
-                            onClick={() => handleQuickSelect(prompt)}
-                            className={`quick-tag ${selectedPrompt === prompt && !customPrompt ? "selected" : ""}`}
-                            style={
-                                selectedPrompt === prompt && !customPrompt
-                                    ? { background: `linear-gradient(135deg, ${color}, ${color}dd)` }
-                                    : {}
-                            }
-                        >
-                            <Icon className="w-4 h-4" />
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Custom Prompt */}
-            <div className="mb-6">
-                <label className="block text-sm font-medium mb-3" style={{ color: "var(--text-secondary)" }}>
-                    Or describe the sound you want to {mode}
-                </label>
-                <input
-                    type="text"
-                    value={customPrompt}
-                    onChange={(e) => {
-                        setCustomPrompt(e.target.value);
-                        setSelectedPrompt(null);
-                    }}
-                    placeholder="e.g., police siren, crowd noise, background conversation..."
-                    className="input-ghost"
-                />
-            </div>
-
-            {/* Auth Warning */}
-            {!isAuthenticated && (
+                {/* ============================================ */}
+                {/* MAIN INPUT - Describe the sound (PROMINENT) */}
+                {/* ============================================ */}
                 <div
-                    className="mb-6 p-4 rounded-xl flex items-start gap-3"
                     style={{
-                        background: "rgba(245, 158, 11, 0.1)",
-                        border: "1px solid rgba(245, 158, 11, 0.3)"
+                        marginBottom: "24px",
+                        padding: "20px",
+                        borderRadius: "14px",
+                        background: "linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(244, 114, 182, 0.1))",
+                        border: "1px solid rgba(168, 85, 247, 0.2)"
                     }}
                 >
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: "var(--ghost-warning)" }} />
-                    <div>
-                        <p className="font-medium" style={{ color: "var(--ghost-warning)" }}>
-                            Authentication Required
-                        </p>
-                        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-                            Connect your HuggingFace account to use SAM Audio models.
-                        </p>
+                    <label style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        fontSize: "0.9rem",
+                        fontWeight: 600,
+                        marginBottom: "12px",
+                        color: "var(--text-primary)"
+                    }}>
+                        <Search style={{ width: "16px", height: "16px", color: "var(--ghost-primary)" }} />
+                        Describe the sound you want to {mode}
+                    </label>
+                    <input
+                        type="text"
+                        value={customPrompt}
+                        onChange={(e) => {
+                            setCustomPrompt(e.target.value);
+                            setSelectedPrompt(null);
+                        }}
+                        placeholder="e.g., singing voice, drums, police siren, crowd noise, a dog barking..."
+                        style={{
+                            width: "100%",
+                            padding: "16px 18px",
+                            borderRadius: "12px",
+                            border: "2px solid var(--ghost-primary)",
+                            background: "var(--bg-primary)",
+                            color: "var(--text-primary)",
+                            fontSize: "1rem",
+                            fontWeight: 500,
+                            outline: "none",
+                            boxShadow: "0 4px 15px rgba(168, 85, 247, 0.15)"
+                        }}
+                    />
+
+                    {/* Quick Select Tags */}
+                    <div style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                        marginTop: "14px"
+                    }}>
+                        {QUICK_PROMPTS.map(({ icon: Icon, label, prompt, color }) => (
+                            <button
+                                key={prompt}
+                                onClick={() => handleQuickSelect(prompt)}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    padding: "8px 12px",
+                                    borderRadius: "20px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontSize: "0.8rem",
+                                    fontWeight: 500,
+                                    transition: "all 0.2s",
+                                    background: selectedPrompt === prompt
+                                        ? `linear-gradient(135deg, ${color}, ${color}dd)`
+                                        : "var(--bg-tertiary)",
+                                    color: selectedPrompt === prompt
+                                        ? "white"
+                                        : "var(--text-secondary)"
+                                }}
+                            >
+                                <Icon style={{ width: "14px", height: "14px" }} />
+                                {label}
+                            </button>
+                        ))}
                     </div>
                 </div>
-            )}
 
-            {/* Action Button */}
-            <button
-                onClick={handleSeparate}
-                disabled={!activePrompt}
-                className="btn-primary w-full py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {mode === "extract" ? "✨ Extract" : "🗑️ Remove"} "{activePrompt || "..."}"
-            </button>
+                {/* Settings Row */}
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "20px",
+                    marginBottom: "20px"
+                }}>
 
-            {/* Info */}
-            <p className="mt-4 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-                Processing typically takes 30-60 seconds depending on audio length
-            </p>
+                    {/* Mode Toggle */}
+                    <div>
+                        <label style={{
+                            display: "block",
+                            fontSize: "0.8rem",
+                            fontWeight: 500,
+                            marginBottom: "10px",
+                            color: "var(--text-muted)"
+                        }}>
+                            Operation
+                        </label>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            <button
+                                onClick={() => setMode("extract")}
+                                style={{
+                                    flex: 1,
+                                    padding: "12px",
+                                    borderRadius: "10px",
+                                    fontWeight: 500,
+                                    fontSize: "0.85rem",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    background: mode === "extract"
+                                        ? "linear-gradient(135deg, var(--ghost-primary), #7C3AED)"
+                                        : "var(--bg-tertiary)",
+                                    color: mode === "extract" ? "white" : "var(--text-secondary)"
+                                }}
+                            >
+                                ✨ Extract
+                            </button>
+                            <button
+                                onClick={() => setMode("remove")}
+                                style={{
+                                    flex: 1,
+                                    padding: "12px",
+                                    borderRadius: "10px",
+                                    fontWeight: 500,
+                                    fontSize: "0.85rem",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    background: mode === "remove"
+                                        ? "linear-gradient(135deg, var(--ghost-error), #DC2626)"
+                                        : "var(--bg-tertiary)",
+                                    color: mode === "remove" ? "white" : "var(--text-secondary)"
+                                }}
+                            >
+                                🗑️ Remove
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Model Selector - Horizontal */}
+                    <div>
+                        <label style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            fontSize: "0.8rem",
+                            fontWeight: 500,
+                            marginBottom: "10px",
+                            color: "var(--text-muted)"
+                        }}>
+                            <Cpu style={{ width: "12px", height: "12px" }} />
+                            Model
+                        </label>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                            {MODEL_OPTIONS.map(({ value, label, vram }) => (
+                                <button
+                                    key={value}
+                                    onClick={() => setModelSize(value)}
+                                    style={{
+                                        flex: 1,
+                                        padding: "10px 8px",
+                                        borderRadius: "8px",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        textAlign: "center",
+                                        background: modelSize === value
+                                            ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                                            : "var(--bg-tertiary)",
+                                        color: modelSize === value ? "white" : "var(--text-secondary)"
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 500, fontSize: "0.8rem" }}>{label}</div>
+                                    <div style={{ fontSize: "0.65rem", opacity: 0.7, marginTop: "2px" }}>{vram}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Auth Warning */}
+                {!isAuthenticated && (
+                    <div
+                        style={{
+                            marginBottom: "16px",
+                            padding: "14px 16px",
+                            borderRadius: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                            background: "rgba(245, 158, 11, 0.1)",
+                            border: "1px solid rgba(245, 158, 11, 0.25)"
+                        }}
+                    >
+                        <AlertCircle style={{
+                            width: "18px",
+                            height: "18px",
+                            flexShrink: 0,
+                            color: "var(--ghost-warning)"
+                        }} />
+                        <p style={{
+                            fontWeight: 500,
+                            fontSize: "0.85rem",
+                            color: "var(--ghost-warning)"
+                        }}>
+                            Connect HuggingFace to continue
+                        </p>
+                    </div>
+                )}
+
+                {/* Action Button */}
+                <button
+                    onClick={handleSeparate}
+                    disabled={!activePrompt}
+                    style={{
+                        width: "100%",
+                        padding: "16px",
+                        borderRadius: "12px",
+                        border: "none",
+                        cursor: activePrompt ? "pointer" : "not-allowed",
+                        fontSize: "1rem",
+                        fontWeight: 600,
+                        background: activePrompt
+                            ? "linear-gradient(135deg, var(--ghost-primary), var(--ghost-accent))"
+                            : "var(--bg-tertiary)",
+                        color: activePrompt ? "white" : "var(--text-muted)",
+                        opacity: activePrompt ? 1 : 0.6,
+                        boxShadow: activePrompt ? "0 4px 15px rgba(168, 85, 247, 0.3)" : "none"
+                    }}
+                >
+                    {mode === "extract" ? "✨ Extract" : "🗑️ Remove"} "{activePrompt || "..."}"
+                </button>
+            </div>
         </div>
     );
 }

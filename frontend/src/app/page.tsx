@@ -175,6 +175,7 @@ export default function Home() {
         onAuthClick={() => setShowAuthModal(true)}
         isDarkMode={isDarkMode}
         onThemeToggle={() => setIsDarkMode(!isDarkMode)}
+        onLogoClick={handleReset}
       />
 
       <div

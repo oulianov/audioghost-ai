@@ -7,13 +7,15 @@ interface HeaderProps {
     onAuthClick: () => void;
     isDarkMode: boolean;
     onThemeToggle: () => void;
+    onLogoClick?: () => void;
 }
 
 export default function Header({
     isAuthenticated,
     onAuthClick,
     isDarkMode,
-    onThemeToggle
+    onThemeToggle,
+    onLogoClick
 }: HeaderProps) {
     return (
         <header
@@ -36,8 +38,17 @@ export default function Header({
                     justifyContent: "space-between"
                 }}
             >
-                {/* Logo */}
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                {/* Logo - Clickable */}
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        cursor: onLogoClick ? "pointer" : "default"
+                    }}
+                    onClick={onLogoClick}
+                    title="Return to home"
+                >
                     <div
                         className="animate-pulse-glow"
                         style={{
