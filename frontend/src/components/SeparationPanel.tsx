@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 interface SeparationPanelProps {
-    onSeparate: (description: string, mode: "extract" | "remove") => void;
+    onSeparate: (description: string, mode: "extract" | "remove", modelSize: string) => void;
     isAuthenticated: boolean;
     onAuthRequired: () => void;
     hasRegion: boolean;
@@ -36,6 +36,7 @@ export default function SeparationPanel({
     const [customPrompt, setCustomPrompt] = useState("");
     const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
     const [mode, setMode] = useState<"extract" | "remove">("extract");
+    const [modelSize, setModelSize] = useState<"small" | "base" | "large">("base");
 
     const handleQuickSelect = (prompt: string) => {
         setSelectedPrompt(prompt);
@@ -51,7 +52,7 @@ export default function SeparationPanel({
         const prompt = customPrompt || selectedPrompt;
         if (!prompt) return;
 
-        onSeparate(prompt, mode);
+        onSeparate(prompt, mode, modelSize);
     };
 
     const activePrompt = customPrompt || selectedPrompt;
@@ -108,6 +109,35 @@ export default function SeparationPanel({
                 </button>
             </div>
 
+            {/* Model Size Selector */}
+            <div className="mb-6">
+                <label className="block text-sm font-medium mb-3" style={{ color: "var(--text-secondary)" }}>
+                    Model Size
+                </label>
+                <div className="flex gap-2">
+                    {([
+                        { value: "small", label: "Small", desc: "Fast (~4GB)" },
+                        { value: "base", label: "Base", desc: "Balanced (~5GB)" },
+                        { value: "large", label: "Large", desc: "Best (~8GB)" },
+                    ] as const).map(({ value, label, desc }) => (
+                        <button
+                            key={value}
+                            onClick={() => setModelSize(value)}
+                            className="flex-1 py-2 px-3 rounded-lg transition-all text-center"
+                            style={{
+                                background: modelSize === value
+                                    ? "linear-gradient(135deg, #6366f1, #8b5cf6)"
+                                    : "var(--bg-tertiary)",
+                                color: modelSize === value ? "white" : "var(--text-secondary)",
+                                border: modelSize === value ? "none" : "1px solid var(--border-color)"
+                            }}
+                        >
+                            <div className="font-medium text-sm">{label}</div>
+                            <div className="text-xs opacity-70">{desc}</div>
+                        </button>
+                    ))}
+                </div>
+            </div>
             {/* Quick Prompts */}
             <div className="mb-6">
                 <label className="block text-sm font-medium mb-3" style={{ color: "var(--text-secondary)" }}>

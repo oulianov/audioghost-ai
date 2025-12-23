@@ -15,6 +15,9 @@ interface TaskResult {
   clean_path: string;
   description: string;
   mode: string;
+  audio_duration?: number;
+  processing_time?: number;
+  model_size?: string;
 }
 
 interface TaskState {
@@ -92,13 +95,14 @@ export default function Home() {
     });
   };
 
-  const handleSeparation = async (description: string, mode: "extract" | "remove") => {
+  const handleSeparation = async (description: string, mode: "extract" | "remove", modelSize: string = "base") => {
     if (!audioFile) return;
 
     const formData = new FormData();
     formData.append("file", audioFile);
     formData.append("description", description);
     formData.append("mode", mode);
+    formData.append("model_size", modelSize);
 
     if (selectedRegion) {
       formData.append("start_time", selectedRegion.start.toString());
@@ -266,6 +270,9 @@ export default function Home() {
             <StemMixer
               taskId={task.taskId}
               description={task.result.description}
+              audioDuration={task.result.audio_duration}
+              processingTime={task.result.processing_time}
+              modelSize={task.result.model_size}
               onNewSeparation={() => {
                 setTask({
                   taskId: null,

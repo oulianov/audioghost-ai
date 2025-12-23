@@ -100,16 +100,37 @@ export default function WaveformEditor({
             }
         });
 
+        // Catch loading errors silently (including AbortError when component unmounts)
+        wavesurfer.on("error", (error) => {
+            // Silently ignore AbortError - this happens when unmounting during load
+            if (error?.name === "AbortError" || String(error).includes("abort")) {
+                return;
+            }
+            console.warn("WaveSurfer error:", error);
+        });
+
         // Load audio
-        wavesurfer.load(audioUrl);
+        wavesurfer.load(audioUrl).catch((error) => {
+            // Silently ignore AbortError
+            if (error?.name === "AbortError" || String(error).includes("abort")) {
+                return;
+            }
+            console.warn("Failed to load audio:", error);
+        });
 
         return () => {
             isMounted = false;
-            try {
-                wavesurfer.destroy();
-            } catch (e) {
-                // Ignore destruction errors
-            }
+            // Use setTimeout to ensure any pending operations complete
+            // before attempting destruction
+            const ws = wavesurfer;
+            setTimeout(() => {
+                try {
+                    ws.destroy();
+                } catch {
+                    // Ignore AbortError and other destruction errors
+                    // This happens when component unmounts during audio loading
+                }
+            }, 0);
         };
     }, [audioUrl]);
 

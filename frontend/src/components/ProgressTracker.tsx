@@ -1,6 +1,6 @@
 "use client";
 
-import { Ghost, Loader2 } from "lucide-react";
+import { Ghost, Loader2, CheckCircle2 } from "lucide-react";
 
 interface ProgressTrackerProps {
     status: "pending" | "processing";
@@ -9,86 +9,200 @@ interface ProgressTrackerProps {
 }
 
 export default function ProgressTracker({ status, progress, message }: ProgressTrackerProps) {
+    const steps = [
+        { step: "Loading model", threshold: 10 },
+        { step: "Processing audio", threshold: 30 },
+        { step: "Running separation", threshold: 50 },
+        { step: "Saving results", threshold: 80 },
+    ];
+
     return (
-        <div className="glass-card p-8">
-            <div className="flex flex-col items-center">
-                {/* Animated Ghost */}
+        <div
+            style={{
+                background: "var(--bg-secondary)",
+                borderRadius: "20px",
+                border: "1px solid var(--glass-border)",
+                padding: "48px 40px"
+            }}
+        >
+            {/* Icon */}
+            <div style={{ textAlign: "center", marginBottom: "32px" }}>
                 <div
-                    className="w-24 h-24 rounded-2xl flex items-center justify-center mb-6 animate-pulse-glow"
-                    style={{ background: "linear-gradient(135deg, var(--ghost-primary), var(--ghost-accent))" }}
+                    style={{
+                        width: "80px",
+                        height: "80px",
+                        borderRadius: "20px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "linear-gradient(135deg, var(--ghost-primary), var(--ghost-accent))",
+                        boxShadow: "0 8px 32px rgba(168, 85, 247, 0.3)"
+                    }}
                 >
                     {status === "pending" ? (
-                        <Ghost className="w-12 h-12 text-white animate-bounce" />
+                        <Ghost style={{ width: "40px", height: "40px", color: "white" }} />
                     ) : (
-                        <Loader2 className="w-12 h-12 text-white animate-spin" />
+                        <Loader2
+                            style={{
+                                width: "40px",
+                                height: "40px",
+                                color: "white",
+                                animation: "spin 1s linear infinite"
+                            }}
+                        />
                     )}
                 </div>
+            </div>
 
-                {/* Status */}
-                <h3 className="text-xl font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-                    {status === "pending" ? "Waiting in Queue..." : "Processing Audio..."}
-                </h3>
+            {/* Title */}
+            <h3
+                style={{
+                    fontSize: "1.5rem",
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                    textAlign: "center",
+                    marginBottom: "8px"
+                }}
+            >
+                {status === "pending" ? "Waiting in Queue..." : "Processing Audio..."}
+            </h3>
 
-                <p className="mb-6" style={{ color: "var(--text-secondary)" }}>
-                    {message}
-                </p>
+            {/* Message */}
+            <p
+                style={{
+                    fontSize: "0.9rem",
+                    color: "var(--text-muted)",
+                    textAlign: "center",
+                    marginBottom: "32px"
+                }}
+            >
+                {message}
+            </p>
 
-                {/* Progress Bar */}
-                <div className="w-full max-w-md">
-                    <div className="flex justify-between text-sm mb-2">
-                        <span style={{ color: "var(--text-muted)" }}>Progress</span>
-                        <span style={{ color: "var(--ghost-primary)" }}>{progress}%</span>
-                    </div>
-                    <div className="progress-bar">
+            {/* Progress Bar */}
+            <div style={{ marginBottom: "32px" }}>
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "10px"
+                    }}
+                >
+                    <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                        Progress
+                    </span>
+                    <span
+                        style={{
+                            fontSize: "0.85rem",
+                            fontWeight: 600,
+                            color: "var(--ghost-primary)"
+                        }}
+                    >
+                        {progress}%
+                    </span>
+                </div>
+                <div
+                    style={{
+                        height: "8px",
+                        borderRadius: "4px",
+                        background: "var(--bg-tertiary)",
+                        overflow: "hidden"
+                    }}
+                >
+                    <div
+                        style={{
+                            height: "100%",
+                            borderRadius: "4px",
+                            background: "linear-gradient(90deg, var(--ghost-primary), var(--ghost-accent))",
+                            width: `${progress}%`,
+                            transition: "width 0.3s ease"
+                        }}
+                    />
+                </div>
+            </div>
+
+            {/* Steps */}
+            <div
+                style={{
+                    background: "var(--bg-tertiary)",
+                    borderRadius: "12px",
+                    padding: "20px"
+                }}
+            >
+                {steps.map(({ step, threshold }, index) => {
+                    const isComplete = progress >= threshold;
+                    const isActive = !isComplete && progress >= threshold - 20;
+
+                    return (
                         <div
-                            className="progress-bar-fill"
-                            style={{ width: `${progress}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* Steps */}
-                <div className="mt-8 w-full max-w-md">
-                    <div className="flex flex-col gap-3">
-                        {[
-                            { step: "Loading model", threshold: 10 },
-                            { step: "Processing audio", threshold: 30 },
-                            { step: "Running separation", threshold: 50 },
-                            { step: "Saving results", threshold: 80 },
-                        ].map(({ step, threshold }) => (
+                            key={step}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "14px",
+                                padding: "12px 0",
+                                borderBottom: index < steps.length - 1
+                                    ? "1px solid var(--border-color)"
+                                    : "none"
+                            }}
+                        >
+                            {/* Status Icon */}
                             <div
-                                key={step}
-                                className="flex items-center gap-3 text-sm"
+                                style={{
+                                    width: "24px",
+                                    height: "24px",
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                    background: isComplete
+                                        ? "linear-gradient(135deg, #10B981, #34D399)"
+                                        : isActive
+                                            ? "var(--ghost-primary)"
+                                            : "transparent",
+                                    border: isComplete || isActive
+                                        ? "none"
+                                        : "2px solid var(--text-muted)"
+                                }}
                             >
-                                <div
-                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                    style={{
-                                        background: progress >= threshold
-                                            ? "linear-gradient(135deg, var(--ghost-success), var(--ghost-secondary))"
-                                            : "var(--bg-tertiary)"
-                                    }}
-                                >
-                                    {progress >= threshold ? (
-                                        <span className="text-white text-xs">✓</span>
-                                    ) : progress >= threshold - 20 ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" style={{ color: "var(--ghost-primary)" }} />
-                                    ) : (
-                                        <span style={{ color: "var(--text-muted)" }}>○</span>
-                                    )}
-                                </div>
-                                <span
-                                    style={{
-                                        color: progress >= threshold
-                                            ? "var(--text-primary)"
-                                            : "var(--text-muted)"
-                                    }}
-                                >
-                                    {step}
-                                </span>
+                                {isComplete ? (
+                                    <CheckCircle2
+                                        style={{
+                                            width: "14px",
+                                            height: "14px",
+                                            color: "white"
+                                        }}
+                                    />
+                                ) : isActive ? (
+                                    <Loader2
+                                        style={{
+                                            width: "12px",
+                                            height: "12px",
+                                            color: "white",
+                                            animation: "spin 1s linear infinite"
+                                        }}
+                                    />
+                                ) : null}
                             </div>
-                        ))}
-                    </div>
-                </div>
+
+                            {/* Step Label */}
+                            <span
+                                style={{
+                                    fontSize: "0.9rem",
+                                    fontWeight: isComplete || isActive ? 500 : 400,
+                                    color: isComplete
+                                        ? "var(--text-primary)"
+                                        : isActive
+                                            ? "var(--ghost-primary)"
+                                            : "var(--text-muted)"
+                                }}
+                            >
+                                {step}
+                            </span>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

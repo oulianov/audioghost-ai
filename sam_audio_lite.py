@@ -1,13 +1,24 @@
 """
 SAM Audio Lite - Lightweight version for low VRAM usage (4-6GB)
 Disables vision_encoder, rankers, and span_predictor to reduce memory
-NO CHUNKING VERSION - Full audio processing for better quality
+WITH CHUNKING - Same logic as Celery worker for memory comparison
 """
 import torch
 import gc
+import time
 
 
-def create_lite_model(model_name: str = "facebook/sam-audio-base", token: str = None):
+def show_gpu_memory(label: str = ""):
+    """Show complete GPU memory stats (matches nvidia-smi more closely)"""
+    if torch.cuda.is_available():
+        allocated = torch.cuda.memory_allocated() / 1024**3
+        reserved = torch.cuda.memory_reserved() / 1024**3
+        max_allocated = torch.cuda.max_memory_allocated() / 1024**3
+        print(f"[GPU Memory{' - ' + label if label else ''}] "
+              f"Allocated: {allocated:.2f}GB | Reserved: {reserved:.2f}GB | Peak: {max_allocated:.2f}GB")
+
+
+def create_lite_model(model_name: str = "facebook/sam-audio-small", token: str = None):
     """
     Create a memory-optimized SAM Audio model by removing unused components.
     
@@ -101,21 +112,21 @@ if __name__ == "__main__":
     dtype = torch.bfloat16
     print(f"Using device: {device}, dtype: {dtype}")
     
-    # Clear GPU memory
+    # Clear GPU memory and reset peak stats
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
         gc.collect()
-        print(f"GPU Memory before loading: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    show_gpu_memory("Before loading model")
     
     # Create lite model
     model, processor = create_lite_model()
     model = model.eval().to(device, dtype)
     
-    if torch.cuda.is_available():
-        print(f"GPU Memory after loading: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    show_gpu_memory("After loading model")
     
     # Test audio
-    test_audio = "output_original.wav"
+    test_audio = "test_chunk.mp3"
     description = "A man speaking"
     
     if not Path(test_audio).exists():
@@ -131,45 +142,140 @@ if __name__ == "__main__":
     print(f"\nProcessing: {test_audio}")
     print(f"Description: '{description}'")
     
-    # Prepare inputs - NO CHUNKING, process full audio
-    print("\nPreparing batch...")
-    batch = processor(
-        audios=[test_audio],
-        descriptions=[description],
-    ).to(device)
+    # Start timing
+    start_time = time.time()
     
-    # Run separation
-    print("Running separation...")
-    if torch.cuda.is_available():
-        print(f"GPU Memory before separation: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    # Load audio
+    sample_rate = processor.audio_sampling_rate
+    audio, orig_sr = torchaudio.load(test_audio)
+    if orig_sr != sample_rate:
+        resampler = torchaudio.transforms.Resample(orig_sr, sample_rate)
+        audio = resampler(audio)
     
-    with torch.inference_mode(), torch.autocast(device_type=device, dtype=dtype):
-        result = model.separate(
-            batch, 
-            predict_spans=False,
-            reranking_candidates=1
-        )
+    # Convert to mono if stereo
+    if audio.shape[0] > 1:
+        audio = audio.mean(dim=0, keepdim=True)
     
-    if torch.cuda.is_available():
-        print(f"GPU Memory after separation: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    # Calculate audio duration
+    audio_duration = audio.shape[1] / sample_rate
+    print(f"\nAudio duration: {audio_duration:.2f}s")
+    
+    # ===============================
+    # CHUNKING LOGIC (same as worker)
+    # ===============================
+    CHUNK_DURATION = 25.0  # 25 seconds per chunk
+    MAX_CHUNK_SAMPLES = int(sample_rate * CHUNK_DURATION)
+    
+    if audio.shape[1] > MAX_CHUNK_SAMPLES:
+        print(f"Audio is {audio_duration:.1f}s, using chunking ({CHUNK_DURATION}s chunks)")
+        
+        # Split audio into chunks
+        audio_tensor = audio.squeeze(0).to(device, dtype)
+        chunks = torch.split(audio_tensor, MAX_CHUNK_SAMPLES, dim=-1)
+        total_chunks = len(chunks)
+        
+        out_target = []
+        out_residual = []
+        
+        show_gpu_memory("Before chunked separation")
+        
+        for i, chunk in enumerate(chunks):
+            print(f"\nProcessing chunk {i+1}/{total_chunks}...")
+            
+            # Skip very short chunks
+            if chunk.shape[-1] < sample_rate:  # Less than 1 second
+                print(f"  Skipping chunk {i+1} (too short: {chunk.shape[-1]/sample_rate:.2f}s)")
+                continue
+            
+            # Prepare batch for this chunk
+            batch = processor(
+                audios=[chunk.unsqueeze(0)],
+                descriptions=[description]
+            ).to(device)
+            
+            # Run separation
+            with torch.inference_mode():
+                with torch.cuda.amp.autocast(enabled=(device == "cuda")):
+                    result = model.separate(
+                        batch,
+                        predict_spans=False,
+                        reranking_candidates=1
+                    )
+            
+            out_target.append(result.target[0].cpu())
+            out_residual.append(result.residual[0].cpu())
+            
+            show_gpu_memory(f"After chunk {i+1}")
+            
+            # Clean up chunk results
+            del batch, result
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        
+        # Concatenate all chunks
+        target_audio = torch.cat(out_target, dim=-1).clamp(-1, 1).float().unsqueeze(0)
+        residual_audio = torch.cat(out_residual, dim=-1).clamp(-1, 1).float().unsqueeze(0)
+        
+        del out_target, out_residual, chunks, audio_tensor
+        
+    else:
+        print(f"Audio is {audio_duration:.1f}s, processing as single batch (no chunking needed)")
+        
+        # Prepare inputs
+        print("\nPreparing batch...")
+        batch = processor(
+            audios=[test_audio],
+            descriptions=[description],
+        ).to(device)
+        
+        # Run separation
+        print("Running separation...")
+        show_gpu_memory("Before separation")
+        
+        with torch.inference_mode(), torch.autocast(device_type=device, dtype=dtype):
+            result = model.separate(
+                batch, 
+                predict_spans=False,
+                reranking_candidates=1
+            )
+        
+        show_gpu_memory("After separation")
+        
+        target_audio = result.target[0].float().unsqueeze(0).cpu()
+        residual_audio = result.residual[0].float().unsqueeze(0).cpu()
+        
+        del batch, result
+    
+    # Calculate processing time
+    processing_time = time.time() - start_time
     
     # Save results
-    print("\nSaving results...")
-    sample_rate = processor.audio_sampling_rate
-    
-    target_audio = result.target[0].float().unsqueeze(0).cpu()
-    residual_audio = result.residual[0].float().unsqueeze(0).cpu()
+    print("\n" + "="*50)
+    print("Saving results...")
     
     torchaudio.save("output_target.wav", target_audio, sample_rate)
     torchaudio.save("output_residual.wav", residual_audio, sample_rate)
     
     # Cleanup
-    del batch, result
+    del target_audio, residual_audio
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         gc.collect()
-        print(f"GPU Memory after cleanup: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+    show_gpu_memory("After cleanup")
     
-    print("\nDone!")
-    print("- output_target.wav: Extracted audio")
-    print("- output_residual.wav: Residual audio")
+    # Summary
+    print("\n" + "="*60)
+    print("SUMMARY")
+    print("="*60)
+    print(f"Audio duration:   {audio_duration:.2f}s ({audio_duration/60:.2f} min)")
+    print(f"Processing time:  {processing_time:.2f}s")
+    print(f"Speed:           {audio_duration/processing_time:.2f}x realtime")
+    print(f"Chunking:        {'Yes (' + str(len(chunks) if 'chunks' in dir() else '?') + ' chunks)' if audio_duration > CHUNK_DURATION else 'No (single batch)'}")
+    if torch.cuda.is_available():
+        peak_gb = torch.cuda.max_memory_allocated() / 1024**3
+        reserved_gb = torch.cuda.max_memory_reserved() / 1024**3
+        print(f"Peak GPU Memory: {peak_gb:.2f}GB (reserved: {reserved_gb:.2f}GB)")
+    print("="*60)
+    print("Output files:")
+    print("  - output_target.wav: Extracted audio")
+    print("  - output_residual.wav: Residual audio")

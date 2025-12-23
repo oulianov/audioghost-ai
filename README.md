@@ -144,23 +144,46 @@ Navigate to `http://localhost:3000`
 4. Wait for processing
 5. **Preview** and **download** the results
 
-## Memory Optimization
+## Performance Benchmarks
+
+> Tested on RTX 4080 with 4:26 audio (11 chunks @ 25s each)
+
+### VRAM Usage (Lite Mode)
+
+| Model | Peak VRAM | Recommended GPU |
+|-------|-----------|-----------------|
+| Small | **~6 GB** | RTX 3060 6GB |
+| Base | **~7 GB** | RTX 3070/4060 8GB |
+| Large | **~10 GB** | RTX 3080/4070 12GB |
+
+### Processing Time
+
+| Model | First Run (incl. model load) | Subsequent Runs | Speed |
+|-------|------------------------------|-----------------|-------|
+| Small | ~78s | **~25s** | ~10x realtime |
+| Base | ~100s | **~29s** | ~9x realtime |
+| Large | ~130s | **~41s** | ~6.5x realtime |
+
+> 💡 First run includes model download and loading. Subsequent runs use cached models.
+
+### Memory Optimization Details
 
 AudioGhost uses a "Lite Mode" that removes unused model components:
 
-| Component | VRAM Saved |
-|-----------|-----------|
+| Component Removed | VRAM Saved |
+|-------------------|------------|
 | Vision Encoder | ~2GB |
 | Visual Ranker | ~2GB |
 | Text Ranker | ~2GB |
 | Span Predictor | ~1-2GB |
 
-**Result**: ~4-5GB VRAM (down from ~11GB)
+**Total Reduction**: Up to **40% less VRAM** compared to original SAM-Audio
 
 This is achieved by:
 - Disabling video-related features (not needed for audio-only)
 - Using `predict_spans=False` and `reranking_candidates=1`
 - Using `bfloat16` precision
+- 25-second chunking for long audio files
 
 ## Project Structure
 
