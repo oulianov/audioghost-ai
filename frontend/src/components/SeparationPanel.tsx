@@ -14,11 +14,20 @@ import {
     Zap
 } from "lucide-react";
 
+interface SeparationSettings {
+    modelSize: "small" | "base" | "large";
+    chunkDuration: number;
+    useFloat32: boolean;
+}
+
 interface SeparationPanelProps {
     onSeparate: (description: string, mode: "extract" | "remove", modelSize: string, chunkDuration: number, useFloat32: boolean) => void;
     isAuthenticated: boolean;
     onAuthRequired: () => void;
     hasRegion: boolean;
+    // Persistent settings from parent
+    settings: SeparationSettings;
+    onSettingsChange: (settings: SeparationSettings) => void;
 }
 
 const QUICK_PROMPTS = [
@@ -40,14 +49,22 @@ export default function SeparationPanel({
     onSeparate,
     isAuthenticated,
     onAuthRequired,
-    hasRegion
+    hasRegion,
+    settings,
+    onSettingsChange
 }: SeparationPanelProps) {
+    // Only prompt and mode are local (reset each time)
     const [customPrompt, setCustomPrompt] = useState("");
     const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
     const [mode, setMode] = useState<"extract" | "remove">("extract");
-    const [modelSize, setModelSize] = useState<"small" | "base" | "large">("base");
-    const [chunkDuration, setChunkDuration] = useState(25);
-    const [useFloat32, setUseFloat32] = useState(false);
+
+    // Destructure settings for easier access
+    const { modelSize, chunkDuration, useFloat32 } = settings;
+
+    // Helper to update a single setting
+    const updateSetting = <K extends keyof SeparationSettings>(key: K, value: SeparationSettings[K]) => {
+        onSettingsChange({ ...settings, [key]: value });
+    };
 
     const handleQuickSelect = (prompt: string) => {
         setSelectedPrompt(prompt);
@@ -276,7 +293,7 @@ export default function SeparationPanel({
                             {MODEL_OPTIONS.map(({ value, label, vram, vramFp32 }) => (
                                 <button
                                     key={value}
-                                    onClick={() => setModelSize(value)}
+                                    onClick={() => updateSetting("modelSize", value)}
                                     style={{
                                         flex: 1,
                                         padding: "10px 8px",
@@ -341,7 +358,7 @@ export default function SeparationPanel({
                         </div>
                     </div>
                     <button
-                        onClick={() => setUseFloat32(!useFloat32)}
+                        onClick={() => updateSetting("useFloat32", !useFloat32)}
                         style={{
                             width: "44px",
                             height: "24px",
@@ -412,7 +429,7 @@ export default function SeparationPanel({
                         max="60"
                         step="5"
                         value={chunkDuration}
-                        onChange={(e) => setChunkDuration(Number(e.target.value))}
+                        onChange={(e) => updateSetting("chunkDuration", Number(e.target.value))}
                         style={{
                             width: "100%",
                             height: "6px",

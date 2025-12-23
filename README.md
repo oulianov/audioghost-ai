@@ -176,9 +176,9 @@ Navigate to `http://localhost:3000`
 
 | Model | bfloat16 (Default) | float32 (High Quality) | Recommended GPU |
 |-------|-------------------|------------------------|-----------------|
-| Small | **~6 GB** | **~9 GB** | RTX 3060 6GB / RTX 3070 8GB |
-| Base | **~7 GB** | **~10 GB** | RTX 3070/4060 8GB / RTX 4070 12GB |
-| Large | **~10 GB** | **~13 GB** | RTX 3080/4070 12GB / RTX 4080 16GB |
+| Small | **~6 GB** | **~10 GB** | RTX 3060 6GB / RTX 3070 8GB |
+| Base | **~7 GB** | **~13 GB** | RTX 3070/4060 8GB / RTX 4070 12GB |
+| Large | **~10 GB** | **~20 GB** | RTX 3080/4070 12GB / RTX 4080 16GB |
 
 > 💡 **High Quality Mode (float32)**: Better separation quality but uses +2-3GB more VRAM. Enable via the "High Quality Mode" toggle in the UI.
 

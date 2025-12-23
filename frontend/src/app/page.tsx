@@ -36,6 +36,13 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState<{ start: number; end: number } | null>(null);
 
+  // Persistent separation settings (won't reset on "New")
+  const [separationSettings, setSeparationSettings] = useState({
+    modelSize: "base" as "small" | "base" | "large",
+    chunkDuration: 25,
+    useFloat32: false,
+  });
+
   const [task, setTask] = useState<TaskState>({
     taskId: null,
     status: "idle",
@@ -262,6 +269,8 @@ export default function Home() {
               isAuthenticated={isAuthenticated}
               onAuthRequired={() => setShowAuthModal(true)}
               hasRegion={!!selectedRegion}
+              settings={separationSettings}
+              onSettingsChange={setSeparationSettings}
             />
           )}
 
