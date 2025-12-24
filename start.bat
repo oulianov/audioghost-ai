@@ -13,16 +13,30 @@ echo.
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 
-:: Check if Redis exists
-if not exist "redis\redis-server.exe" (
-    echo [ERROR] Redis not found. Please run install.bat first.
-    pause
-    exit /b 1
+:: Check if Docker Redis is already running on port 6379
+echo [1/4] Checking Redis...
+netstat -an | findstr ":6379.*LISTENING" >nul 2>&1
+if %ERRORLEVEL%==0 (
+    echo       Docker Redis detected - using existing instance
+    goto :redis_ready
 )
 
-echo [1/4] Starting Redis...
-start "AudioGhost Redis" /min cmd /c "cd /d %SCRIPT_DIR%redis && redis-server.exe"
-timeout /t 2 /nobreak >nul
+:: Docker Redis not running, try offline Redis
+if exist "redis\redis-server.exe" (
+    echo       Starting offline Redis...
+    start "AudioGhost Redis" /min cmd /c "cd /d %SCRIPT_DIR%redis && redis-server.exe"
+    timeout /t 2 /nobreak >nul
+    goto :redis_ready
+)
+
+:: Neither available
+echo [ERROR] Redis not available. Either:
+echo         - Start Docker: docker-compose up -d
+echo         - Or run install.bat to download offline Redis
+pause
+exit /b 1
+
+:redis_ready
 
 echo [2/4] Starting Backend API...
 start "AudioGhost Backend" cmd /k "cd /d %SCRIPT_DIR% && conda activate audioghost && cd backend && uvicorn main:app --reload --port 8000"
@@ -50,11 +64,11 @@ echo ║   - AudioGhost Backend (FastAPI)                            ║
 echo ║   - AudioGhost Worker (Celery)                              ║
 echo ║   - AudioGhost Frontend (Next.js)                           ║
 echo ║                                                              ║
-echo ║   Close all windows to stop services.                       ║
-echo ║                                                              ║
-echo ║   Press any key to open browser...                          ║
+echo ║   Run stop.bat or close all windows to stop services.       ║
 echo ╚══════════════════════════════════════════════════════════════╝
-pause >nul
+echo.
+echo Opening browser in 3 seconds...
+timeout /t 3 /nobreak >nul
 
-:: Open browser
+:: Open browser automatically
 start http://localhost:3000
