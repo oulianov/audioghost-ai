@@ -10,7 +10,11 @@ Describe the sound you want to extract or remove using natural language. Powered
 
 ## 🎬 Demo
 
+### Audio Separation
 https://github.com/user-attachments/assets/49248e25-0c56-46ab-a821-2de7f7016bb6
+
+### Video Upload
+https://github.com/user-attachments/assets/6b8c08a8-c84f-4fc3-83ad-5703f474fc1b
 
 ## Features
 
