@@ -1,5 +1,5 @@
 """
-Separation API - Audio Separation Endpoints
+Separation API - Audio/Video Separation Endpoints
 """
 import uuid
 from pathlib import Path
@@ -13,6 +13,11 @@ from workers.tasks import separate_audio_task
 router = APIRouter()
 
 UPLOAD_DIR = Path("uploads")
+
+# Supported MIME types
+AUDIO_TYPES = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/flac", "audio/m4a", "audio/aac"]
+VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/mpeg", "video/x-matroska"]
+VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".mpeg"]
 
 
 class SeparationRequest(BaseModel):
@@ -41,9 +46,9 @@ async def create_separation_task(
     use_float32: str = Form("false")
 ):
     """
-    Create a new audio separation task
+    Create a new audio/video separation task
     
-    - **file**: Audio file to process
+    - **file**: Audio or video file to process (video audio will be extracted)
     - **description**: Text prompt describing the sound to separate
     - **mode**: "extract" to isolate the sound, "remove" to remove it
     - **start_time**: Optional start time for temporal prompting
@@ -59,11 +64,12 @@ async def create_separation_task(
     # Parse use_float32 from string to bool
     use_float32_bool = use_float32.lower() == "true"
     
-    # Validate file type
-    allowed_types = ["audio/mpeg", "audio/wav", "audio/mp3", "audio/x-wav", "audio/flac"]
-    if file.content_type and file.content_type not in allowed_types:
-        # Be lenient with content type checking
-        pass
+    # Detect if file is video
+    file_extension = Path(file.filename).suffix.lower() if file.filename else ""
+    is_video = (
+        (file.content_type and file.content_type in VIDEO_TYPES) or
+        file_extension in VIDEO_EXTENSIONS
+    )
     
     # Generate task ID
     task_id = str(uuid.uuid4())
@@ -90,7 +96,8 @@ async def create_separation_task(
             anchors,
             model_size,
             chunk_duration,
-            use_float32_bool
+            use_float32_bool,
+            is_video  # New: flag for video processing
         ],
         task_id=task_id
     )

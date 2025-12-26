@@ -8,6 +8,7 @@ import WaveformEditor from "@/components/WaveformEditor";
 import SeparationPanel from "@/components/SeparationPanel";
 import ProgressTracker from "@/components/ProgressTracker";
 import StemMixer from "@/components/StemMixer";
+import VideoStemMixer from "@/components/VideoStemMixer";
 
 interface TaskResult {
   original_path: string;
@@ -18,6 +19,8 @@ interface TaskResult {
   audio_duration?: number;
   processing_time?: number;
   model_size?: string;
+  video_path?: string;
+  is_video?: boolean;
 }
 
 interface TaskState {
@@ -33,6 +36,7 @@ export default function Home() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isVideo, setIsVideo] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState<{ start: number; end: number } | null>(null);
 
@@ -75,6 +79,12 @@ export default function Home() {
     setAudioFile(file);
     const url = URL.createObjectURL(file);
     setAudioUrl(url);
+
+    // Detect if file is video
+    const isVideoFile = file.type.startsWith("video/") ||
+      /\.(mp4|webm|mov|avi|mkv)$/i.test(file.name);
+    setIsVideo(isVideoFile);
+
     // Reset task state
     setTask({
       taskId: null,
@@ -92,6 +102,7 @@ export default function Home() {
     }
     setAudioFile(null);
     setAudioUrl(null);
+    setIsVideo(false);
     setSelectedRegion(null);
     setTask({
       taskId: null,
@@ -224,13 +235,13 @@ export default function Home() {
           )}
 
 
-          {/* Waveform Editor with Reset Button */}
+          {/* Waveform Editor (Audio) or Video Preview */}
           {audioUrl && (
             <>
               {/* Reset Button */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-primary)" }}>
-                  Audio Editor
+                  {isVideo ? "Video Preview" : "Audio Editor"}
                 </h2>
                 <button
                   onClick={handleReset}
@@ -253,11 +264,45 @@ export default function Home() {
                   ↩ Upload New File
                 </button>
               </div>
-              <WaveformEditor
-                audioUrl={audioUrl}
-                onRegionSelect={setSelectedRegion}
-                selectedRegion={selectedRegion}
-              />
+
+              {/* Show Video Player or Waveform based on file type */}
+              {isVideo ? (
+                <div
+                  style={{
+                    background: "var(--bg-secondary)",
+                    borderRadius: "16px",
+                    border: "1px solid var(--glass-border)",
+                    padding: "16px",
+                    overflow: "hidden"
+                  }}
+                >
+                  <video
+                    src={audioUrl}
+                    controls
+                    style={{
+                      width: "100%",
+                      maxHeight: "400px",
+                      borderRadius: "12px",
+                      background: "#000",
+                      objectFit: "contain"
+                    }}
+                  />
+                  <p style={{
+                    fontSize: "0.8rem",
+                    color: "var(--text-muted)",
+                    marginTop: "12px",
+                    textAlign: "center"
+                  }}>
+                    Audio will be extracted from this video for separation processing
+                  </p>
+                </div>
+              ) : (
+                <WaveformEditor
+                  audioUrl={audioUrl}
+                  onRegionSelect={setSelectedRegion}
+                  selectedRegion={selectedRegion}
+                />
+              )}
             </>
           )}
 
@@ -283,24 +328,43 @@ export default function Home() {
             />
           )}
 
-          {/* Results - Stem Mixer */}
+          {/* Results - Stem Mixer (Audio) or Video Stem Mixer */}
           {task.status === "completed" && task.result && task.taskId && (
-            <StemMixer
-              taskId={task.taskId}
-              description={task.result.description}
-              audioDuration={task.result.audio_duration}
-              processingTime={task.result.processing_time}
-              modelSize={task.result.model_size}
-              onNewSeparation={() => {
-                setTask({
-                  taskId: null,
-                  status: "idle",
-                  progress: 0,
-                  message: "",
-                  result: null,
-                });
-              }}
-            />
+            task.result.is_video ? (
+              <VideoStemMixer
+                taskId={task.taskId}
+                description={task.result.description}
+                audioDuration={task.result.audio_duration}
+                processingTime={task.result.processing_time}
+                modelSize={task.result.model_size}
+                onNewSeparation={() => {
+                  setTask({
+                    taskId: null,
+                    status: "idle",
+                    progress: 0,
+                    message: "",
+                    result: null,
+                  });
+                }}
+              />
+            ) : (
+              <StemMixer
+                taskId={task.taskId}
+                description={task.result.description}
+                audioDuration={task.result.audio_duration}
+                processingTime={task.result.processing_time}
+                modelSize={task.result.model_size}
+                onNewSeparation={() => {
+                  setTask({
+                    taskId: null,
+                    status: "idle",
+                    progress: 0,
+                    message: "",
+                    result: null,
+                  });
+                }}
+              />
+            )
           )}
 
           {/* Error State */}

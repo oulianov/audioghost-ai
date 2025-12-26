@@ -81,12 +81,12 @@ async def get_task_status(task_id: str):
 @router.get("/{task_id}/download/{file_type}")
 async def download_result(task_id: str, file_type: str):
     """
-    Download processed audio file
+    Download processed audio or video file
     
-    - **file_type**: "original", "ghost", or "clean"
+    - **file_type**: "original", "ghost", "clean", or "video"
     """
     
-    if file_type not in ["original", "ghost", "clean"]:
+    if file_type not in ["original", "ghost", "clean", "video"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
     
     result = AsyncResult(task_id, app=celery_app)
@@ -94,6 +94,34 @@ async def download_result(task_id: str, file_type: str):
     if result.state != "SUCCESS":
         raise HTTPException(status_code=404, detail="Task not completed")
     
+    # Handle video file separately
+    if file_type == "video":
+        video_path = result.result.get("video_path")
+        if not video_path:
+            raise HTTPException(status_code=404, detail="No video file for this task")
+        
+        file_path = Path(video_path)
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Video file not found")
+        
+        # Determine media type based on extension
+        extension = file_path.suffix.lower()
+        media_types = {
+            ".mp4": "video/mp4",
+            ".webm": "video/webm",
+            ".mov": "video/quicktime",
+            ".avi": "video/x-msvideo",
+            ".mkv": "video/x-matroska"
+        }
+        media_type = media_types.get(extension, "video/mp4")
+        
+        return FileResponse(
+            path=file_path,
+            filename=f"{task_id}_video{extension}",
+            media_type=media_type
+        )
+    
+    # Handle audio files
     file_path = Path(result.result.get(f"{file_type}_path", ""))
     
     if not file_path.exists():

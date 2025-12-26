@@ -167,19 +167,21 @@ def separate_audio_task(
     anchors: Optional[List] = None,
     model_size: str = "base",
     chunk_duration: float = 25.0,
-    use_float32: bool = False
+    use_float32: bool = False,
+    is_video: bool = False
 ):
     """
     Separate audio using SAM Audio Lite (memory optimized)
     
     Args:
-        audio_path: Path to input audio file
+        audio_path: Path to input audio or video file
         description: Text prompt for separation
         mode: "extract" or "remove"
         anchors: Optional temporal anchors [["+", start, end], ...]
         model_size: Model size (small/base/large)
         chunk_duration: Audio chunk duration in seconds (5-60)
         use_float32: Use float32 precision for better quality
+        is_video: If True, extract audio from video file first
     
     Returns:
         Dictionary with paths to output files
@@ -187,13 +189,53 @@ def separate_audio_task(
     import torch
     import torchaudio
     import time
+    import subprocess
+    import shutil
     from huggingface_hub import login
     
     task_id = self.request.id
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    video_path = None  # Will be set if input is video
     
     # Debug: Show received parameter
     print(f"[DEBUG] use_float32 parameter received: {use_float32} (type: {type(use_float32).__name__})")
+    print(f"[DEBUG] is_video parameter received: {is_video}")
+    
+    # Handle video files - extract audio using FFmpeg
+    if is_video:
+        update_progress(2, "Extracting audio from video...")
+        video_path = Path(audio_path)
+        
+        # Copy video to output directory for later playback
+        output_video_path = OUTPUT_DIR / f"{task_id}.video{video_path.suffix}"
+        shutil.copy2(video_path, output_video_path)
+        print(f"[DEBUG] Copied video to: {output_video_path}")
+        
+        # Extract audio from video using FFmpeg
+        extracted_audio_path = OUTPUT_DIR / f"{task_id}.extracted.wav"
+        ffmpeg_cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-vn",                    # No video
+            "-acodec", "pcm_s16le",   # PCM 16-bit
+            "-ar", "44100",           # 44.1kHz sample rate
+            "-ac", "1",               # Mono
+            str(extracted_audio_path)
+        ]
+        
+        try:
+            result = subprocess.run(
+                ffmpeg_cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            print(f"[DEBUG] FFmpeg audio extraction successful")
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"FFmpeg audio extraction failed: {e.stderr}")
+        
+        # Use extracted audio for processing
+        audio_path = str(extracted_audio_path)
     
     # Set precision based on use_float32 parameter
     if use_float32 or device == "cpu":
@@ -364,7 +406,7 @@ def separate_audio_task(
         processing_time = time.time() - start_time
         print(f"[DEBUG] Processing completed in {processing_time:.2f}s for {audio_duration:.2f}s audio")
         
-        return {
+        result = {
             "original_path": str(original_path),
             "ghost_path": str(ghost_path),
             "clean_path": str(clean_path),
@@ -374,6 +416,14 @@ def separate_audio_task(
             "processing_time": round(processing_time, 2),
             "model_size": model_size
         }
+        
+        # Add video path if this was a video file
+        if video_path is not None:
+            output_video_path = OUTPUT_DIR / f"{task_id}.video{video_path.suffix}"
+            result["video_path"] = str(output_video_path)
+            result["is_video"] = True
+        
+        return result
 
         
     except Exception as e:

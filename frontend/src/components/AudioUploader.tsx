@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, Music, FileAudio } from "lucide-react";
+import { Upload, Music, Video } from "lucide-react";
 
 interface AudioUploaderProps {
     onFileUpload: (file: File) => void;
@@ -26,21 +26,30 @@ export default function AudioUploader({ onFileUpload }: AudioUploaderProps) {
         setIsDragOver(false);
 
         const file = e.dataTransfer.files[0];
-        if (file && isAudioFile(file)) {
+        if (file && isMediaFile(file)) {
             onFileUpload(file);
         }
     }, [onFileUpload]);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file && isAudioFile(file)) {
+        if (file && isMediaFile(file)) {
             onFileUpload(file);
         }
     };
 
-    const isAudioFile = (file: File) => {
-        return file.type.startsWith("audio/") ||
-            /\.(mp3|wav|flac|ogg|m4a|aac)$/i.test(file.name);
+    const isMediaFile = (file: File) => {
+        // Accept audio files
+        if (file.type.startsWith("audio/") ||
+            /\.(mp3|wav|flac|ogg|m4a|aac)$/i.test(file.name)) {
+            return true;
+        }
+        // Accept video files
+        if (file.type.startsWith("video/") ||
+            /\.(mp4|webm|mov|avi|mkv)$/i.test(file.name)) {
+            return true;
+        }
+        return false;
     };
 
     return (
@@ -54,7 +63,7 @@ export default function AudioUploader({ onFileUpload }: AudioUploaderProps) {
             <input
                 ref={fileInputRef}
                 type="file"
-                accept="audio/*"
+                accept="audio/*,video/*"
                 onChange={handleFileSelect}
                 className="hidden"
             />
@@ -78,7 +87,7 @@ export default function AudioUploader({ onFileUpload }: AudioUploaderProps) {
 
                 {/* Text */}
                 <h3 className="text-xl font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-                    {isDragOver ? "Drop your audio file here" : "Upload Audio File"}
+                    {isDragOver ? "Drop your file here" : "Upload Audio or Video"}
                 </h3>
                 <p className="mb-4" style={{ color: "var(--text-secondary)" }}>
                     Drag & drop or click to browse
@@ -86,7 +95,7 @@ export default function AudioUploader({ onFileUpload }: AudioUploaderProps) {
 
                 {/* Supported formats */}
                 <div className="flex items-center gap-2 flex-wrap justify-center">
-                    {["MP3", "WAV", "FLAC", "AAC", "M4A"].map((format) => (
+                    {["MP3", "WAV", "FLAC", "MP4", "WebM", "MOV"].map((format) => (
                         <span
                             key={format}
                             className="px-3 py-1 rounded-full text-xs font-medium"
